@@ -1,0 +1,45 @@
+version: "3.9"
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: cms-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "Your_strong_!Passw0rd"
+    ports:
+      - "14333:1433"
+
+  redis:
+    image: redis:7-alpine
+    container_name: cms-redis
+    ports:
+      - "6379:6379"
+
+  customer-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: customer-api
+    depends_on:
+      - sqlserver
+      - redis
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=CustomerManagementSystemDb;User Id=sa;Password=Your_strong_!Passw0rd;TrustServerCertificate=True;"
+      ConnectionStrings__Redis: "redis:6379"
+      Jwt__Secret: "THIS_IS_A_DEV_ONLY_JWT_SECRET_KEY_CHANGE_IN_PRODUCTION_1234567890"
+      Jwt__Issuer: "CustomerManagementSystem"
+      Jwt__Audience: "CustomerManagementSystem.Frontend"
+    ports:
+      - "5000:5000"
+
+  customer-react:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: customer-react
+    depends_on:
+      - customer-api
+    ports:
+      - "3000:80"
